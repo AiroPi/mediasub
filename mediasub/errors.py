@@ -1,0 +1,2 @@
+class NoScriptTagFound(Exception):
+    pass
