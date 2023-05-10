@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "media_listener"
+description = "Listen media from different sources."
+keywords = []
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">=3.10"
+dynamic = ["version", "readme", "dependencies"]
+
+[tool.setuptools.dynamic]
+version = { attr = "mediasub.__version__" }
+dependencies = { file = ["requirements.txt"] }
+readme = { file = ["README.md"] }
+
+[tool.setuptools]
+packages = ["mediasub"]
