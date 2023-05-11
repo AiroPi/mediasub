@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 R = TypeVar("R")
 Coro = Coroutine[Any, Any, R]
 
-Callback = Callable[[list[Content]], Coro[R]]
+Callback = Callable[[Content], Coro[R]]
 
 
 class MediaSub:
@@ -48,8 +48,8 @@ class MediaSub:
                 continue
 
             last = await source.get_last_content(10)
-            new = [content for content in last if content.id not in self._history]
-            self._history.extend(content.id for content in new)
+            news = [content for content in last if content.id not in self._history]
+            self._history.extend(content.id for content in news)
             self.dump_history()
 
             if timeout := getattr(source, "timeout", None):
@@ -58,7 +58,8 @@ class MediaSub:
                 self.timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=self.default_timeout)
 
             for callback in callbacks:
-                self.running_tasks.append(asyncio.create_task(callback(new)))
+                for new in news:
+                    self.running_tasks.append(asyncio.create_task(callback(new)))
 
         return min(until - dt.datetime.now() for until in self.timeouts.values()).total_seconds()
 
