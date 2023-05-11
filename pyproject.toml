@@ -23,3 +23,6 @@ readme = { file = ["README.md"] }
 
 [tool.setuptools]
 packages = ["mediasub", "mediasub.builtins"]
+
+[tool.setuptools.package-data]
+mediasub = ["py.typed"]
