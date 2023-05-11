@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "media_listener"
+name = "mediasub"
 description = "Listen media from different sources."
 keywords = []
 classifiers = [
@@ -22,4 +22,4 @@ dependencies = { file = ["requirements.txt"] }
 readme = { file = ["README.md"] }
 
 [tool.setuptools]
-packages = ["mediasub"]
+packages = ["mediasub", "mediasub.builtins"]
