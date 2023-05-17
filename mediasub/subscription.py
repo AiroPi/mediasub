@@ -5,22 +5,23 @@ import datetime as dt
 import json
 import logging
 import pathlib
-from typing import Any, Callable, Coroutine, Iterable, TypeVar
+from typing import Any, Callable, Coroutine, Type, TypeVar
 
 import httpx
 
 from ._logger import setup_logger
-from .content import Content
-from .source import Source
+from .models.base import Source
 
 setup_logger()
 logger = logging.getLogger(__name__)
 
 
+_RT = TypeVar("_RT")
 R = TypeVar("R")
+S = TypeVar("S", bound=Source[Any, Any, Any])
 Coro = Coroutine[Any, Any, R]
 
-Callback = Callable[[Content], Coro[R]]
+Callback = Callable[[S, _RT], Coro[R]]
 
 
 class MediaSub:
@@ -30,7 +31,7 @@ class MediaSub:
         self.db_path = pathlib.Path(db_path)
         self._client = httpx.AsyncClient()
         self.timeouts: dict[str, dt.datetime] = {}
-        self.bound_callbacks: dict[Source, list[Callback[Any]]] = {}
+        self.bound_callbacks: dict[Source[Any, Any, Any], list[Callback[Any, Any, Any]]] = {}
         self.running_tasks: list[asyncio.Task[Any]] = []
 
         self._history = self.load_history()
@@ -47,7 +48,7 @@ class MediaSub:
             if self.timeouts[source.name] > dt.datetime.now():
                 continue
 
-            last = await source.get_last_content(10)
+            last = await source.get_recent(10)
             news = [content for content in last if content.id not in self._history]
             self._history.extend(content.id for content in news)
             self.dump_history()
@@ -59,15 +60,20 @@ class MediaSub:
 
             for callback in callbacks:
                 for new in news:
-                    self.running_tasks.append(asyncio.create_task(callback(new)))
+                    self.running_tasks.append(asyncio.create_task(callback(source, new)))
 
         return min(until - dt.datetime.now() for until in self.timeouts.values()).total_seconds()
 
-    def sub_to(self, /, src: Source | Iterable[Source]) -> Callable[[Callback[R]], Callback[R]]:
-        def decorator(func: Callback[R]) -> Callback[R]:
-            sources = src if isinstance(src, Iterable) else [src]
+    def sub_to(
+        self, cls: Type[S], *sources: Source[_RT, Any, Any]
+    ) -> Callable[[Callback[S, _RT, R]], Callback[S, _RT, R]]:
+        for source in sources:
+            if not isinstance(source, cls):
+                raise ValueError(f"Source {source} is not an instance of {cls}")
+
+        def decorator(func: Callback[S, _RT, R]) -> Callback[S, _RT, R]:
             for source in sources:
-                source.set_client(self._client)
+                source.client = self._client
                 self.bound_callbacks.setdefault(source, []).append(func)
                 self.timeouts.setdefault(source.name, dt.datetime.now())
             return func
