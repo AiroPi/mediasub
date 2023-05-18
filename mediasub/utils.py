@@ -1,5 +1,8 @@
+import re
 from itertools import chain, islice
 from typing import Generator, Iterable, Sequence, TypeVar
+
+from unidecode import unidecode
 
 T = TypeVar("T")
 
@@ -15,3 +18,10 @@ def chunker(it: Iterable[T], n: int) -> Generator[Sequence[T], None, None]:
         except StopIteration:
             return
         yield tuple(chain((first_el,), chunk_it))
+
+
+def normalize(s: str) -> str:
+    s = unidecode(s).casefold()
+    s = s.replace(" ", "_").replace("-", "_")
+    s = re.sub(r"([^\w])*", "", s)
+    return s
