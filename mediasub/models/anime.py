@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 from ..utils import normalize
-from .base import HistoryContent, Source, impact_status
+from .base import HistoryContent, NormalizedObject, Source, impact_status
 
 
 class AnimeSource(Source["Episode", "Anime", "Episode"]):
@@ -19,11 +19,15 @@ class AnimeSource(Source["Episode", "Anime", "Episode"]):
 
 
 @dataclass
-class Anime:
+class Anime(NormalizedObject):
     name: str
     url: str
 
     raw_data: Any = field(repr=False, default=None)
+
+    @property
+    def normalized_name(self) -> str:
+        return normalize(self.name)
 
 
 @dataclass

@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 from ..utils import normalize
-from .base import HistoryContent, Source, impact_status
+from .base import HistoryContent, NormalizedObject, Source, impact_status
 
 
 class MangaSource(Source["Chapter", "Manga", "Page"]):
@@ -27,11 +27,15 @@ class MangaSource(Source["Chapter", "Manga", "Page"]):
 
 
 @dataclass
-class Manga:
+class Manga(NormalizedObject):
     name: str
     url: str
 
     raw_data: Any = field(repr=False, default=None)
+
+    @property
+    def normalized_name(self) -> str:
+        return normalize(self.name)
 
 
 @dataclass
@@ -47,7 +51,7 @@ class Chapter(HistoryContent):
 
     @property
     def normalized_name(self) -> str:
-        return f"{normalize(self.manga.name)}/{self.number}{f'.{self.sub_number}' if self.sub_number else ''}"
+        return f"{self.manga.normalized_name}/{self.number}{f'.{self.sub_number}' if self.sub_number else ''}"
 
     @property
     def id(self) -> str:

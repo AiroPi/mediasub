@@ -96,7 +96,7 @@ class Source(ABC, Generic[T_RECENT, T_SEARCH, T_DL]):
         raise NotImplementedError
 
 
-class HistoryContent(ABC):
+class NormalizedObject(ABC):
     @property
     @abstractmethod
     def normalized_name(self) -> str:
@@ -114,6 +114,8 @@ class HistoryContent(ABC):
         """
         pass
 
+
+class HistoryContent(NormalizedObject):
     @property
     @abstractmethod
     def id(self) -> str:
