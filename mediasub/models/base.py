@@ -77,6 +77,14 @@ class Source(ABC, Generic[T_RECENT, T_SEARCH, T_DL]):
     async def _search(self, query: str) -> Iterable[T_SEARCH]:
         pass
 
+    @impact_status
+    async def all(self) -> Iterable[T_SEARCH]:
+        return await self._all()
+
+    @abstractmethod
+    async def _all(self) -> Iterable[T_SEARCH]:
+        pass
+
     @property
     def supports_download(self) -> bool:
         return self.__class__._download is not Source._download  # pyright: ignore[reportUnknownMemberType]

@@ -1,3 +1,3 @@
-from .subscription import MediaSub as MediaSub
+from .core import MediaSub as MediaSub
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
