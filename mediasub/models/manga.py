@@ -37,6 +37,10 @@ class Manga(NormalizedObject):
     def normalized_name(self) -> str:
         return normalize(self.name)
 
+    @property
+    def display(self) -> str:
+        return self.name
+
 
 @dataclass
 class Chapter(HistoryContent):
@@ -52,6 +56,10 @@ class Chapter(HistoryContent):
     @property
     def normalized_name(self) -> str:
         return f"{self.manga.normalized_name}/{self.number}{f'.{self.sub_number}' if self.sub_number else ''}"
+
+    @property
+    def display(self) -> str:
+        return f"{self.manga.display}{self.name}"
 
     @property
     def id(self) -> str:

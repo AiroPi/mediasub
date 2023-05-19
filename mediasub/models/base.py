@@ -114,6 +114,14 @@ class NormalizedObject(ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def display(self) -> str:
+        """
+        Return a string that can be displayed to the user.
+        """
+        pass
+
 
 class HistoryContent(NormalizedObject):
     @property
