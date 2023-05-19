@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Type, cast
 
 from mediasub import MediaSub
 from mediasub.models import Chapter, MangaSource
@@ -9,10 +10,10 @@ logger = logging.getLogger(__name__)
 media_sub = MediaSub("./history.sqlite")
 
 
-MangaDex: MangaSource  # not implemented, only used as example
+MangaDex = cast(Type[MangaSource], None)  # not implemented, only used as example
 
 
-@media_sub.sub_to(MangaSource, MangaDex())
+@media_sub.sub_to(MangaDex())
 async def on_new_chapter(source: MangaSource, chapter: Chapter) -> None:
     print(chapter.manga.name, "#", chapter.number, f"({chapter.name})")
 

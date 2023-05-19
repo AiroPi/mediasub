@@ -4,7 +4,7 @@ import asyncio
 import datetime as dt
 import logging
 import pathlib
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Type
+from typing import TYPE_CHECKING, Any, Callable, Iterable
 
 import aiosqlite
 import httpx
@@ -80,12 +80,8 @@ class MediaSub:
         return min(until - dt.datetime.now() for until in self._timeouts.values()).total_seconds()
 
     def sub_to(
-        self, cls: Type[T_SOURCE], *sources: Source[T_RECENT, Any, Any]
+        self, *sources: T_SOURCE
     ) -> Callable[[Callback[T_SOURCE, T_RECENT, T_RETURN]], Callback[T_SOURCE, T_RECENT, T_RETURN]]:
-        for source in sources:
-            if not isinstance(source, cls):
-                raise ValueError(f"Source {source} is not an instance of {cls}")
-
         def decorator(func: Callback[T_SOURCE, T_RECENT, T_RETURN]) -> Callback[T_SOURCE, T_RECENT, T_RETURN]:
             for source in sources:
                 source.client = self._client
