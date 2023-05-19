@@ -74,7 +74,7 @@ class MediaSub:
                 self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=self.default_timeout)
 
             for callback in callbacks:
-                for new in not_posted:
+                for new in reversed(not_posted):
                     self._running_tasks.append(asyncio.create_task(callback(source, new)))
 
         return min(until - dt.datetime.now() for until in self._timeouts.values()).total_seconds()
