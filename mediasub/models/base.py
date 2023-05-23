@@ -4,17 +4,20 @@ import io
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Concatenate, Generic, Iterable, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Callable, Concatenate, Generic, Iterable, ParamSpec, TypeVar
 
 import httpx
 
 from .._logger import BraceMessage as __
 from ..errors import SourceDown
-from ..types import T_DL, T_RECENT, T_SEARCH, Coro
+from ..types import DLT, Coro, RecentT_co, SearchT_co
 
-R = TypeVar("R")
-P = ParamSpec("P")
-S = TypeVar("S", bound="Source[Any, Any, Any]")
+if TYPE_CHECKING:
+    from typing import Any
+
+    R = TypeVar("R")
+    P = ParamSpec("P")
+    S = TypeVar("S", bound="Source[Any, Any, Any]")
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +44,7 @@ def impact_status(func: Callable[Concatenate[S, P], Coro[R]]) -> Callable[Concat
     return inner
 
 
-class Source(ABC, Generic[T_RECENT, T_SEARCH, T_DL]):
+class Source(ABC, Generic[RecentT_co, SearchT_co, DLT]):
     name: str
 
     def __init__(self, without_subscription: bool = False):
@@ -62,37 +65,38 @@ class Source(ABC, Generic[T_RECENT, T_SEARCH, T_DL]):
         self._client = client
 
     @impact_status
-    async def get_recent(self, limit: int, before: int | None = None) -> Iterable[T_RECENT]:
+    async def get_recent(self, limit: int, before: int | None = None) -> Iterable[RecentT_co]:
         return await self._get_recent(limit, before)
 
     @abstractmethod
-    async def _get_recent(self, limit: int, before: int | None = None) -> Iterable[T_RECENT]:
+    async def _get_recent(self, limit: int, before: int | None = None) -> Iterable[RecentT_co]:
         pass
 
     @impact_status
-    async def search(self, query: str) -> Iterable[T_SEARCH]:
+    async def search(self, query: str) -> Iterable[SearchT_co]:
         return await self._search(query)
 
     @abstractmethod
-    async def _search(self, query: str) -> Iterable[T_SEARCH]:
+    async def _search(self, query: str) -> Iterable[SearchT_co]:
         pass
 
     @impact_status
-    async def all(self) -> Iterable[T_SEARCH]:
+    async def all(self) -> Iterable[SearchT_co]:
         return await self._all()
 
     @abstractmethod
-    async def _all(self) -> Iterable[T_SEARCH]:
+    async def _all(self) -> Iterable[SearchT_co]:
         pass
 
     @property
     def supports_download(self) -> bool:
+        # pylint: disable=protected-access
         return self.__class__._download is not Source._download  # pyright: ignore[reportUnknownMemberType]
 
-    async def download(self, target: T_DL) -> tuple[str, io.BytesIO]:
+    async def download(self, target: DLT) -> tuple[str, io.BytesIO]:
         return await self._download(target)
 
-    async def _download(self, target: T_DL) -> tuple[str, io.BytesIO]:
+    async def _download(self, target: DLT) -> tuple[str, io.BytesIO]:
         raise NotImplementedError
 
 
@@ -112,7 +116,6 @@ class NormalizedObject(ABC):
         For example, for a manga chapter, it could be formatted as:
         "manga_name/xxx" where xxx is the chapter number.
         """
-        pass
 
     @property
     @abstractmethod
@@ -120,7 +123,6 @@ class NormalizedObject(ABC):
         """
         Return a string that can be displayed to the user.
         """
-        pass
 
 
 class HistoryContent(NormalizedObject):

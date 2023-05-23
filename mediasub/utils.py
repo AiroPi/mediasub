@@ -7,12 +7,12 @@ from unidecode import unidecode
 T = TypeVar("T")
 
 
-def chunker(it: Iterable[T], n: int) -> Generator[Sequence[T], None, None]:
-    if n < 1:
+def chunker(iterable: Iterable[T], number: int) -> Generator[Sequence[T], None, None]:
+    if number < 1:
         raise ValueError("n must be at least one")
-    it = iter(it)
+    iterable = iter(iterable)
     while True:
-        chunk_it = islice(it, n)
+        chunk_it = islice(iterable, number)
         try:
             first_el = next(chunk_it)
         except StopIteration:
@@ -20,8 +20,8 @@ def chunker(it: Iterable[T], n: int) -> Generator[Sequence[T], None, None]:
         yield tuple(chain((first_el,), chunk_it))
 
 
-def normalize(s: str) -> str:
-    s = unidecode(s).casefold()
-    s = s.replace(" ", "_").replace("-", "_")
-    s = re.sub(r"([^\w])*", "", s)
-    return s
+def normalize(string: str) -> str:
+    string = unidecode(string).casefold()
+    string = string.replace(" ", "_").replace("-", "_")
+    string = re.sub(r"([^\w])*", "", string)
+    return string

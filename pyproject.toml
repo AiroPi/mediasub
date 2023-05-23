@@ -26,3 +26,9 @@ packages = ["mediasub", "mediasub.models"]
 
 [tool.setuptools.package-data]
 mediasub = ["py.typed"]
+
+[tool.pylint]
+max-line-length = 120
+disable = ["C0115", "C0116", "C0114", "R0903", "R0902", "W0511"]
+good-names = ["e", "id"]
+allow-reexport-from-package = true

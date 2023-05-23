@@ -6,7 +6,7 @@ from typing import Any, Literal, ParamSpec
 
 P = ParamSpec("P")
 
-dt_fmt = "%Y-%m-%d %H:%M:%S"
+DT_FMT = "%Y-%m-%d %H:%M:%S"
 
 
 def stream_supports_color(stream: Any) -> bool:
@@ -19,9 +19,7 @@ def stream_supports_color(stream: Any) -> bool:
     # WT_SESSION checks if this is Windows Terminal
     # VSCode built-in terminal supports colour too
     return is_a_tty and (
-        "ANSICON" in os.environ
-        or "WT_SESSION" in os.environ
-        or os.environ.get("TERM_PROGRAM") == "vscode"
+        "ANSICON" in os.environ or "WT_SESSION" in os.environ or os.environ.get("TERM_PROGRAM") == "vscode"
     )
 
 
@@ -46,7 +44,7 @@ class _ColorFormatter(logging.Formatter):
     FORMATS = {
         level: logging.Formatter(
             f"\x1b[30;1m%(asctime)s\x1b[0m {colour}%(levelname)-8s\x1b[0m \x1b[35m%(name)s\x1b[0m %(message)s",
-            dt_fmt,
+            DT_FMT,
         )
         for level, colour in LEVEL_COLOURS
     }
@@ -78,9 +76,7 @@ class BraceMessage:
         return self.fmt.format(*self.args, **self.kwargs)
 
 
-def setup_logger(
-    name: str | None = None, log_file: str | None = None, level: int = logging.INFO
-) -> logging.Logger:
+def setup_logger(name: str | None = None, log_file: str | None = None, level: int = logging.INFO) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
@@ -89,17 +85,13 @@ def setup_logger(
         stream_handler.setFormatter(_ColorFormatter())
     else:
         stream_handler.setFormatter(
-            logging.Formatter(
-                "[{asctime}] [{levelname:<8}] {name}: {message}", dt_fmt, style="{"
-            )
+            logging.Formatter("[{asctime}] [{levelname:<8}] {name}: {message}", DT_FMT, style="{")
         )
     logger.addHandler(stream_handler)
 
     if log_file is not None:
         log_handler = logging.FileHandler(log_file)
-        formatter = logging.Formatter(
-            "[{asctime}] [{levelname:<8}] {name}: {message}", dt_fmt, style="{"
-        )
+        formatter = logging.Formatter("[{asctime}] [{levelname:<8}] {name}: {message}", DT_FMT, style="{")
         log_handler.setFormatter(formatter)
         logger.addHandler(log_handler)
 
@@ -125,8 +117,8 @@ def log_function(
         except Exception as e:
             method(f"Failed : {task}", exc_info=e)
             raise
-        else:
-            if not silent:
-                method(f"Finished : {task}")
+
+        if not silent:
+            method(f"Finished : {task}")
 
     return inner()

@@ -15,7 +15,7 @@ from .errors import SourceDown
 from .models.base import HistoryContent, Source
 
 if TYPE_CHECKING:
-    from .types import T_RECENT, T_RETURN, T_SOURCE, Callback
+    from .types import Callback, RecentT_co, ReturnT, SourceT
 
 setup_logger()
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ class MediaSub:
             except SourceDown:
                 logger.exception(__("Source {} is down.", source.name), exc_info=True)
                 continue
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 logger.exception(
                     __("An error occurred while fetching {}'s recent content.", source.name), exc_info=True
                 )
@@ -80,9 +80,9 @@ class MediaSub:
         return min(until - dt.datetime.now() for until in self._timeouts.values()).total_seconds()
 
     def sub_to(
-        self, *sources: T_SOURCE
-    ) -> Callable[[Callback[T_SOURCE, T_RECENT, T_RETURN]], Callback[T_SOURCE, T_RECENT, T_RETURN]]:
-        def decorator(func: Callback[T_SOURCE, T_RECENT, T_RETURN]) -> Callback[T_SOURCE, T_RECENT, T_RETURN]:
+        self, *sources: SourceT
+    ) -> Callable[[Callback[SourceT, RecentT_co, ReturnT]], Callback[SourceT, RecentT_co, ReturnT]]:
+        def decorator(func: Callback[SourceT, RecentT_co, ReturnT]) -> Callback[SourceT, RecentT_co, ReturnT]:
             for source in sources:
                 source.client = self._client
                 self._bound_callbacks.setdefault(source, []).append(func)
