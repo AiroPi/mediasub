@@ -17,7 +17,7 @@ from .models.base import HistoryContent, Source
 if TYPE_CHECKING:
     from .types import Callback, RecentT_co, ReturnT, SourceT
 
-setup_logger()
+setup_logger("mediasub")
 logger = logging.getLogger(__name__)
 
 
