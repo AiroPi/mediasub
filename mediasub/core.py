@@ -41,7 +41,16 @@ class MediaSub:
             timeout = await self.sync()
             await asyncio.sleep(timeout)
 
-            self._running_tasks = [task for task in self._running_tasks if not task.done()]
+            del_tasks: set[asyncio.Task[Any]] = set()
+            for task in self._running_tasks:
+                if task.done():
+                    exception = task.exception()
+                    if exception is not None:
+                        logger.exception(__("An error occurred while executing a callback."), exc_info=exception)
+                    del_tasks.add(task)
+
+            for task in del_tasks:
+                self._running_tasks.remove(task)
 
     async def sync(self) -> float:
         for source, callbacks in self._bound_callbacks.items():
