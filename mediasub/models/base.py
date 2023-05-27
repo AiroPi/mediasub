@@ -88,16 +88,11 @@ class Source(ABC, Generic[RecentT_co, SearchT_co, DLT]):
     async def _all(self) -> Iterable[SearchT_co]:
         pass
 
-    @property
-    def supports_download(self) -> bool:
-        # pylint: disable=protected-access
-        return self.__class__._download is not Source._download  # pyright: ignore[reportUnknownMemberType]
 
+class SupportsDownload(ABC):
+    @abstractmethod
     async def download(self, target: DLT) -> tuple[str, io.BytesIO]:
-        return await self._download(target)
-
-    async def _download(self, target: DLT) -> tuple[str, io.BytesIO]:
-        raise NotImplementedError
+        pass
 
 
 class NormalizedObject(ABC):
