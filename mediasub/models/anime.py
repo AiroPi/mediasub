@@ -4,42 +4,26 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
+from ..base import Source
 from ..utils import normalize
-from .base import HistoryContent, NormalizedObject, Source, SupportsDownload, impact_status
 
 
-class AnimeSource(Source["Episode", "Anime"]):
-    @impact_status
-    async def get_episodes(self, anime: Anime) -> Iterable[Episode]:
-        return await self._get_episodes(anime)
-
+class AnimeSource(Source["Episode"]):
     @abstractmethod
-    async def _get_episodes(self, anime: Anime) -> Iterable[Episode]:
+    async def get_episodes(self, anime: Anime) -> Iterable[Episode]:
         pass
 
 
-class AnimeSupportsDownload(SupportsDownload["Episode"]):
-    pass
-
-
 @dataclass
-class Anime(NormalizedObject):
+class Anime:
     name: str
     url: str
 
     raw_data: Any = field(repr=False, default=None)
 
-    @property
-    def normalized_name(self) -> str:
-        return normalize(self.name)
-
-    @property
-    def display(self) -> str:
-        return self.name
-
 
 @dataclass
-class Episode(HistoryContent):
+class Episode:
     anime: Anime
     name: str
     number: int
@@ -49,14 +33,7 @@ class Episode(HistoryContent):
 
     raw_data: Any = field(repr=False, default=None)
 
-    @property
-    def normalized_name(self) -> str:
-        return f"{normalize(self.anime.name)}/{self.number}{f'.{self.sub_number}' if self.sub_number else ''}"
-
-    @property
-    def display(self) -> str:
-        return f"{self.anime.display} - {self.name}"
-
-    @property
-    def id(self) -> str:
-        return f"{self.url}"
+    def __post_init__(self):
+        self.db_identifier = (
+            f"{normalize(self.anime.name)}/{self.number}{f'.{self.sub_number}' if self.sub_number else ''}"
+        )

@@ -11,11 +11,11 @@ import httpx
 
 from ._logger import BraceMessage as __
 from ._logger import setup_logger
+from .base import Identifiable, Source
 from .errors import SourceDown
-from .models.base import HistoryContent, Source
 
 if TYPE_CHECKING:
-    from .types import Callback, RecentT_co, ReturnT, SourceT
+    from .types import Callback, ET_co, ReturnT, SourceT
 
 setup_logger("mediasub")
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class MediaSub:
                 continue
 
             try:
-                last: Iterable[HistoryContent] = await source.get_recent(30)
+                last: Iterable[Identifiable] = await source.get_recent(30)
             except SourceDown:
                 logger.exception(__("Source {} is down.", source.name), exc_info=True)
                 continue
@@ -68,30 +68,24 @@ class MediaSub:
                 )
                 continue
 
-            new_elements = [
-                content for content in last if not await self._db.already_processed(source.name, content.id)
-            ]
-            not_posted = [
-                content for content in new_elements if not await self._db.is_duplicate(content.normalized_name)
-            ]
-            for content in new_elements:
-                await self._db.add(source.name, content.id, content.normalized_name, content in not_posted)
+            new_elements = [content for content in last if not await self._db.already_processed(content)]
+            for content in reversed(new_elements):
+                await self._db.add(content)
+
+                for callback in callbacks:
+                    self._running_tasks.append(asyncio.create_task(callback(source, content)))
 
             if timeout := getattr(source, "timeout", None):
                 self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=timeout)
             else:
                 self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=self.default_timeout)
 
-            for callback in callbacks:
-                for new in reversed(not_posted):
-                    self._running_tasks.append(asyncio.create_task(callback(source, new)))
-
         return min(until - dt.datetime.now() for until in self._timeouts.values()).total_seconds()
 
     def sub_to(
         self, *sources: SourceT
-    ) -> Callable[[Callback[SourceT, RecentT_co, ReturnT]], Callback[SourceT, RecentT_co, ReturnT]]:
-        def decorator(func: Callback[SourceT, RecentT_co, ReturnT]) -> Callback[SourceT, RecentT_co, ReturnT]:
+    ) -> Callable[[Callback[SourceT, ET_co, ReturnT]], Callback[SourceT, ET_co, ReturnT]]:
+        def decorator(func: Callback[SourceT, ET_co, ReturnT]) -> Callback[SourceT, ET_co, ReturnT]:
             for source in sources:
                 source.client = self._client
                 self._bound_callbacks.setdefault(source, []).append(func)
@@ -127,29 +121,20 @@ class Database:
             sql = """
             CREATE TABLE IF NOT EXISTS history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                source TEXT,
-                url TEXT,
-                normalized_content TEXT,
-                published INTEGER
+                identifier TEXT,
             )
             """
             await cursor.execute(sql)
         await self.connection.commit()
 
-    async def already_processed(self, source: str, content_id: str) -> bool:
-        sql = """SELECT * FROM history WHERE source = ? AND url = ?"""
+    async def already_processed(self, content: Identifiable) -> bool:
+        sql = """SELECT * FROM history WHERE identifier"""
         async with self.cursor() as cursor:
-            await cursor.execute(sql, (source, content_id))
+            await cursor.execute(sql, (content.db_identifier,))
             return await cursor.fetchone() is not None
 
-    async def is_duplicate(self, normalized: str) -> bool:
-        sql = """SELECT * FROM history WHERE normalized_content = ?"""
+    async def add(self, content: Identifiable) -> None:
+        sql = """INSERT INTO history (identifier) VALUES (?)"""
         async with self.cursor() as cursor:
-            await cursor.execute(sql, (normalized,))
-            return await cursor.fetchone() is not None
-
-    async def add(self, source: str, content_id: str, normalized: str, published: int) -> None:
-        sql = """INSERT INTO history (source, url, normalized_content, published) VALUES (?, ?, ?, ?)"""
-        async with self.cursor() as cursor:
-            await cursor.execute(sql, (source, content_id, normalized, published))
+            await cursor.execute(sql, (content.db_identifier))
         await self.connection.commit()
