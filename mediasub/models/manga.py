@@ -5,10 +5,10 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 from ..utils import normalize
-from .base import HistoryContent, NormalizedObject, Source, impact_status
+from .base import HistoryContent, NormalizedObject, Source, SupportsDownload, impact_status
 
 
-class MangaSource(Source["Chapter", "Manga", "Page"]):
+class MangaSource(Source["Chapter", "Manga"]):
     @impact_status
     async def get_pages(self, chapter: Chapter) -> Iterable[Page]:
         return await self._get_pages(chapter)
@@ -64,6 +64,10 @@ class Chapter(HistoryContent):
     @property
     def id(self) -> str:
         return f"{self.url}"
+
+
+class MangaSupportsDownload(SupportsDownload["Page"]):
+    pass
 
 
 @dataclass

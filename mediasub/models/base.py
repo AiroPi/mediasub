@@ -13,11 +13,9 @@ from ..errors import SourceDown
 from ..types import DLT, Coro, RecentT_co, SearchT_co
 
 if TYPE_CHECKING:
-    from typing import Any
-
     R = TypeVar("R")
     P = ParamSpec("P")
-    S = TypeVar("S", bound="Source[Any, Any, Any]")
+    S = TypeVar("S", bound="Source")
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +42,7 @@ def impact_status(func: Callable[Concatenate[S, P], Coro[R]]) -> Callable[Concat
     return inner
 
 
-class Source(ABC, Generic[RecentT_co, SearchT_co, DLT]):
+class Source(ABC, Generic[RecentT_co, SearchT_co]):
     name: str
 
     def __init__(self, without_subscription: bool = False):
@@ -89,7 +87,7 @@ class Source(ABC, Generic[RecentT_co, SearchT_co, DLT]):
         pass
 
 
-class SupportsDownload(ABC):
+class SupportsDownload(ABC, Generic[DLT]):
     @abstractmethod
     async def download(self, target: DLT) -> tuple[str, io.BytesIO]:
         pass

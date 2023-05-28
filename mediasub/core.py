@@ -28,11 +28,11 @@ class MediaSub:
         self._db = Database(db_path)
         self._client = httpx.AsyncClient()
         self._timeouts: dict[str, dt.datetime] = {}
-        self._bound_callbacks: dict[Source[Any, Any, Any], list[Callback[Any, Any, Any]]] = {}
+        self._bound_callbacks: dict[Source, list[Callback[Any, Any, Any]]] = {}
         self._running_tasks: list[asyncio.Task[Any]] = []
 
     @property
-    def sources(self) -> list[Source[Any, Any, Any]]:
+    def sources(self) -> list[Source]:
         return list(self._bound_callbacks.keys())
 
     async def start(self) -> None:

@@ -5,10 +5,10 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 from ..utils import normalize
-from .base import HistoryContent, NormalizedObject, Source, impact_status
+from .base import HistoryContent, NormalizedObject, Source, SupportsDownload, impact_status
 
 
-class AnimeSource(Source["Episode", "Anime", "Episode"]):
+class AnimeSource(Source["Episode", "Anime"]):
     @impact_status
     async def get_episodes(self, anime: Anime) -> Iterable[Episode]:
         return await self._get_episodes(anime)
@@ -16,6 +16,10 @@ class AnimeSource(Source["Episode", "Anime", "Episode"]):
     @abstractmethod
     async def _get_episodes(self, anime: Anime) -> Iterable[Episode]:
         pass
+
+
+class AnimeSupportsDownload(SupportsDownload["Episode"]):
+    pass
 
 
 @dataclass
