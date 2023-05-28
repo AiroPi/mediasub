@@ -44,6 +44,7 @@ def impact_status(func: Callable[Concatenate[S, P], Coro[R]]) -> Callable[Concat
 
 class Source(ABC, Generic[RecentT_co, SearchT_co]):
     name: str
+    url: str
 
     def __init__(self, without_subscription: bool = False):
         self.without_subscription = without_subscription
