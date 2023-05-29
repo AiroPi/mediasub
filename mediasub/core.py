@@ -124,7 +124,7 @@ class Database:
             sql = """
             CREATE TABLE IF NOT EXISTS history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                identifier TEXT,
+                identifier TEXT
             )
             """
             await cursor.execute(sql)
