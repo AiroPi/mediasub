@@ -131,7 +131,7 @@ class Database:
         await self.connection.commit()
 
     async def already_processed(self, content: Identifiable) -> bool:
-        sql = """SELECT * FROM history WHERE identifier"""
+        sql = """SELECT * FROM history WHERE identifier = ?"""
         async with self.cursor() as cursor:
             await cursor.execute(sql, (content.db_identifier,))
             return await cursor.fetchone() is not None
