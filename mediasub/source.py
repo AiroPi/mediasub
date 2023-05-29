@@ -1,27 +1,14 @@
 from __future__ import annotations
 
-import io
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Concatenate,
-    Generic,
-    Iterable,
-    ParamSpec,
-    Protocol,
-    TypeVar,
-    runtime_checkable,
-)
+from typing import TYPE_CHECKING, Generic, Iterable, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 import httpx
 
 from ._logger import BraceMessage as __
-from .errors import SourceDown
-from .types import Coro, ET_co
+from .types import ET_co
 
 if TYPE_CHECKING:
     R = TypeVar("R")
@@ -36,21 +23,6 @@ class Status(Enum):
     UP = "UP"
     DOWN = "DOWN"
     UNKNOWN = "WARNING"
-
-
-def impact_status(func: Callable[Concatenate[S, P], Coro[R]]) -> Callable[Concatenate[S, P], Coro[R]]:
-    async def inner(source: S, *args: P.args, **kwargs: P.kwargs) -> R:
-        try:
-            res = await func(source, *args, **kwargs)
-        except SourceDown:
-            source.status = Status.DOWN
-            raise
-        except:
-            source.status = Status.UP
-            raise
-        return res
-
-    return inner
 
 
 class Source(ABC, Generic[ET_co]):
@@ -74,17 +46,9 @@ class Source(ABC, Generic[ET_co]):
     def client(self, client: httpx.AsyncClient):
         self._client = client
 
-    @impact_status
-    async def get_recent(self, limit: int = 25) -> Iterable[ET_co]:
-        return await self._get_recent(limit)
-
     @abstractmethod
-    async def _get_recent(self, limit: int) -> Iterable[ET_co]:
-        pass
-
-    @property
-    def supports_download(self) -> bool:
-        return isinstance(self, SupportsDownload)
+    async def get_recent(self, limit: int = 25) -> Iterable[ET_co]:
+        ...
 
 
 @runtime_checkable
@@ -96,10 +60,4 @@ class Identifiable(Protocol):
 
     @property
     def db_identifier(self) -> str:
-        ...
-
-
-@runtime_checkable
-class SupportsDownload(Protocol):
-    async def download(self, target: Any) -> tuple[str, io.BytesIO]:
         ...

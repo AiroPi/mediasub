@@ -11,8 +11,8 @@ import httpx
 
 from ._logger import BraceMessage as __
 from ._logger import setup_logger
-from .base import Identifiable, Source
 from .errors import SourceDown
+from .source import Identifiable, Source, Status
 
 if TYPE_CHECKING:
     from .types import Callback, ET_co, ReturnT, SourceT
@@ -60,13 +60,16 @@ class MediaSub:
             try:
                 last: Iterable[Identifiable] = await source.get_recent(30)
             except SourceDown:
+                source.status = Status.DOWN
                 logger.exception(__("Source {} is down.", source.name), exc_info=True)
                 continue
             except Exception:  # pylint: disable=broad-except
+                source.status = Status.UNKNOWN
                 logger.exception(
                     __("An error occurred while fetching {}'s recent content.", source.name), exc_info=True
                 )
                 continue
+            source.status = Status.UNKNOWN
 
             new_elements = [content for content in last if not await self._db.already_processed(content)]
             for content in reversed(new_elements):
