@@ -137,7 +137,7 @@ class Database:
             return await cursor.fetchone() is not None
 
     async def add(self, content: Identifiable) -> None:
-        sql = """INSERT INTO history (identifier) VALUES (?)"""
+        sql = """INSERT INTO history (identifier,) VALUES (?)"""
         async with self.cursor() as cursor:
-            await cursor.execute(sql, (content.db_identifier))
+            await cursor.execute(sql, (content.db_identifier,))
         await self.connection.commit()
