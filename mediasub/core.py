@@ -26,7 +26,7 @@ class MediaSub:
 
     def __init__(self, db_path: str):
         self._db = Database(db_path)
-        self._client = httpx.AsyncClient()
+        self._client = httpx.AsyncClient(follow_redirects=True)
         self._timeouts: dict[str, dt.datetime] = {}
         self._bound_callbacks: dict[Source, list[Callback[Any, Any, Any]]] = {}
         self._running_tasks: list[asyncio.Task[Any]] = []
@@ -61,7 +61,7 @@ class MediaSub:
                 last: Iterable[Identifiable] = await source.get_recent(30)
             except SourceDown:
                 source.status = Status.DOWN
-                logger.exception(__("Source {} is down.", source.name), exc_info=True)
+                logger.exception(__("Source {} is down.", source.name))
                 continue
             except Exception:  # pylint: disable=broad-except
                 source.status = Status.UNKNOWN
@@ -69,7 +69,7 @@ class MediaSub:
                     __("An error occurred while fetching {}'s recent content.", source.name), exc_info=True
                 )
                 continue
-            source.status = Status.UNKNOWN
+            source.status = Status.UP
 
             new_elements = [content for content in last if not await self._db.already_processed(content)]
             for content in reversed(new_elements):

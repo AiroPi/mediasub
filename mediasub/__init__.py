@@ -3,4 +3,4 @@ from .errors import SourceDown as SourceDown
 from .source import Identifiable as Identifiable
 from .source import Source as Source
 
-__version__ = "1.2.1"
+__version__ = "1.2.2"
