@@ -60,8 +60,9 @@ class MediaSub:
             try:
                 last: Iterable[Identifiable] = await source.get_recent(30)
             except SourceDown:
-                source.status = Status.DOWN
-                logger.warning(__("Source {} is down.", source.name))
+                if source.status != Status.DOWN:
+                    source.status = Status.DOWN
+                    logger.warning(__("Source {} is down.", source.name))
                 continue
             except Exception:  # pylint: disable=broad-except
                 source.status = Status.UNKNOWN
