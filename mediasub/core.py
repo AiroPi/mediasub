@@ -79,12 +79,10 @@ class MediaSub:
                 for callback in callbacks:
                     self._running_tasks.append(asyncio.create_task(callback(source, content)))
 
-            if timeout := getattr(source, "timeout", None):
-                self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=timeout)
-            else:
-                self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=self.default_timeout)
+            timeout = getattr(source, "timeout", self.default_timeout)
+            self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=timeout)
 
-        return min(until - dt.datetime.now() for until in self._timeouts.values()).total_seconds()
+        return min(self._timeouts.values(), key=lambda until: until - dt.datetime.now()).total_seconds()
 
     def sub_to(
         self, *sources: SourceT
