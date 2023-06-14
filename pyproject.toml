@@ -29,6 +29,37 @@ mediasub = ["py.typed"]
 
 [tool.pylint]
 max-line-length = 120
-disable = ["C0115", "C0116", "C0114", "R0903", "R0902", "W0511"]
-good-names = ["e", "id"]
 allow-reexport-from-package = true
+ignore-patterns = [".*.pyi"]
+jobs = 4
+unsafe-load-any-extension = false
+disable = [
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "abstract-method",
+    "unnecessary-ellipsis",
+    # "arguments-differ",
+    # "attribute-defined-outside-init",
+    # "duplicate-code",
+    # "eq-without-hash",
+    # "fixme",
+    # "global-statement",
+    # "implicit-str-concat",
+    # "import-error",
+    # "import-self",
+    # "import-star-module-level",
+    # "inconsistent-return-statements",
+    # "invalid-str-codec",
+]
+argument-rgx = "^[a-z_][a-z0-9_]{0,30}$"
+attr-rgx = "^[a-z_][a-z0-9_]{0,30}$"
+function-rgx = "^[a-z_][a-z0-9_]{0,30}$"
+method-rgx = '[a-z_][a-z0-9_]{0,30}$'
+variable-rgx = '[a-z_][a-z0-9_]{0,30}$'
+ignore-long-lines = '''(?x)(
+^\s*(\#\ )?<?https?://\S+>?$|
+^\s*(from\s+\S+\s+)?import\s+.+$)'''
+indent-string = '    '
+dummy-variables-rgx = '^\*{0,2}(_$|unused_|dummy_)'
+callbacks = ['cb_', '_cb']

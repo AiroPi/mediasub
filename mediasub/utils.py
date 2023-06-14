@@ -21,6 +21,23 @@ def chunker(iterable: Iterable[T], number: int) -> Generator[Sequence[T], None, 
 
 
 def normalize(string: str) -> str:
+    """Normalize a string, useful for making identifiers.
+
+    This method will:
+        - lowercase the string
+        - remove special characters
+        - replace kanji etc.. with their latin equivalent
+        - replace the spaces and the "-" with an underscore
+
+    Example:
+        `OnePiece`, `one-piece` or `one piece` become `one_piece`.
+
+    Args:
+        string: the string you want to normalize.
+
+    Returns:
+        the normalized string.
+    """
     string = unidecode(string).casefold()
     string = string.replace(" ", "_").replace("-", "_")
     string = re.sub(r"([^\w])*", "", string)
