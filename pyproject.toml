@@ -22,7 +22,7 @@ dependencies = { file = ["requirements.txt"] }
 readme = { file = ["README.md"] }
 
 [tool.setuptools]
-packages = ["mediasub", "mediasub.models"]
+packages = ["mediasub"]
 
 [tool.setuptools.package-data]
 mediasub = ["py.typed"]
