@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Generic, Iterable, NamedTuple, ParamSpec, Prot
 import httpx
 
 from ._logger import BraceMessage as __
-from .types import ET_co
+from .types import ID_co
 
 if TYPE_CHECKING:
     from mediasub.core import MediaSub
@@ -43,7 +43,7 @@ class Status(Enum):
     WARNING = "WARNING"
 
 
-class Source(ABC, Generic[ET_co]):
+class Source(ABC, Generic[ID_co]):
     """The base class for any source you want to implement.
 
     All sources you want to implement must inherit from PollSource or PubsubSource, that inherit from Source.
@@ -120,7 +120,7 @@ class PollSource(Source):
         self.timeout = timeout
 
     @abstractmethod
-    async def poll(self, last_poll_ctx: LastPollContext | None = None) -> Iterable[ET_co]:
+    async def poll(self, last_poll_ctx: LastPollContext | None = None) -> Iterable[ID_co]:
         """A method called periodically by the core to check for new content.
 
 
@@ -182,6 +182,6 @@ class Identifiable(Protocol):
     """
 
     @property
-    def db_identifier(self) -> str:
+    def id(self) -> str:
         """The unique ID of a content."""
         ...

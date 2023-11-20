@@ -3,19 +3,17 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
-import pathlib
 from typing import TYPE_CHECKING, Any, Callable, Iterable
 
-import aiosqlite
 import httpx
 
-from ._logger import BraceMessage as __
-from ._logger import setup_logger
+from ._logger import BraceMessage as __, setup_logger
+from .database import Database
 from .errors import SourceDown
 from .source import Identifiable, PollSource, Source, Status
 
 if TYPE_CHECKING:
-    from .types import Callback, ET_co, ReturnT, SourceT
+    from .types import Callback, ID_co, ReturnT, SourceT
 
 setup_logger("mediasub")
 logger = logging.getLogger(__name__)
@@ -24,17 +22,25 @@ logger = logging.getLogger(__name__)
 class MediaSub:
     def __init__(self, db_path: str):
         self._db = Database(db_path)
-        self._client = httpx.AsyncClient(follow_redirects=True)
+        self._webclient = httpx.AsyncClient(follow_redirects=True)
         self._timeouts: dict[str, dt.datetime] = {}
         self._bound_callbacks: dict[Source, list[Callback[Any, Any, Any]]] = {}
         self._running_tasks: list[asyncio.Task[Any]] = []
 
     @property
     def sources(self) -> list[Source]:
+        """Returns a list of all the sources recorded using MediaSub.sub_to"""
         return list(self._bound_callbacks.keys())
 
     async def start(self) -> None:
+        """Starts the main loop.
+
+        This method will never return.
+        The loop sync the sources, and wait until the first timeout is reached.
+        sync add tasks to self._running_tasks. These tasks are cleaned up by the main loop.
+        """
         await self._db.init()
+
         while True:
             timeout = await self.sync()
             await asyncio.sleep(timeout)
@@ -44,13 +50,25 @@ class MediaSub:
                 if task.done():
                     exception = task.exception()
                     if exception is not None:
-                        logger.exception(__("An error occurred while executing a callback."), exc_info=exception)
+                        logger.exception(
+                            __("An error occurred while executing a callback."),
+                            exc_info=exception,
+                        )
                     del_tasks.add(task)
 
             for task in del_tasks:
                 self._running_tasks.remove(task)
 
-    async def _manage_content(self, src: Source, *contents: Identifiable) -> None:
+    async def _handle_content(self, src: Source, *contents: Identifiable) -> None:
+        """This is the method called by sync and publish to manage the new content.
+
+        This function filter the new content to only keep the ones that have not been processed yet.
+        Then it add them to the database, and call the callbacks bound to the source.
+
+        Args:
+            src: the source from which the content comes
+            *contents: the new content
+        """
         callbacks = self._bound_callbacks[src]
 
         new_elements = [content for content in contents if not await self._db.already_processed(content)]
@@ -61,6 +79,13 @@ class MediaSub:
                 self._running_tasks.append(asyncio.create_task(callback(src, content)))
 
     async def sync(self) -> float:
+        """Synchronize the source, getting the last published contents.
+
+        This function iter over all the sources, ignoring the ones that did not reach their timeout.
+
+        Returns:
+            The time until the next timeout, in seconds.
+        """
         for source in self._bound_callbacks.items():
             if not isinstance(source, PollSource):
                 continue
@@ -75,15 +100,19 @@ class MediaSub:
                     source.status = Status.DOWN
                     logger.warning(__("Source {} is down.", source.name))
                 continue
-            except Exception:  # pylint: disable=broad-except
+            except Exception as e:
                 source.status = Status.UNKNOWN
                 logger.exception(
-                    __("An error occurred while fetching {}'s recent content.", source.name), exc_info=True
+                    __(
+                        "An error occurred while fetching {}'s recent content.",
+                        source.name,
+                    ),
+                    exc_info=e,
                 )
                 continue
             source.status = Status.UP
 
-            await self._manage_content(source, *contents)
+            await self._handle_content(source, *contents)
             self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=source.timeout)
 
         return min(until - dt.datetime.now() for until in self._timeouts.values()).total_seconds()
@@ -95,61 +124,25 @@ class MediaSub:
             src: the source that get some new content
             *contents: all the new content
         """
-        await self._manage_content(src, *contents)
+        await self._handle_content(src, *contents)
 
     def sub_to(
         self, *sources: SourceT
-    ) -> Callable[[Callback[SourceT, ET_co, ReturnT]], Callback[SourceT, ET_co, ReturnT]]:
-        def decorator(func: Callback[SourceT, ET_co, ReturnT]) -> Callback[SourceT, ET_co, ReturnT]:
+    ) -> Callable[[Callback[SourceT, ID_co, ReturnT]], Callback[SourceT, ID_co, ReturnT]]:
+        """Use this decorator to bind a callback to some sources.
+
+        Example::
+
+                @mediasub.sub_to(Youtube())
+                async def on_video(src: Youtube, video: Video):
+                    print(f"New video from {video.channel.name} : {video.title}")
+        """
+
+        def decorator(func: Callback[SourceT, ID_co, ReturnT]) -> Callback[SourceT, ID_co, ReturnT]:
             for source in sources:
-                source.client = self._client
+                source.client = self._webclient
                 self._bound_callbacks.setdefault(source, []).append(func)
                 self._timeouts.setdefault(source.name, dt.datetime.now())
             return func
 
         return decorator
-
-
-class Database:
-    def __init__(self, path: str):
-        self.path = pathlib.Path(path)
-        self._connection: aiosqlite.Connection | None = None
-
-    async def connect(self):
-        self._connection = await aiosqlite.connect(self.path)
-
-    @property
-    def connection(self) -> aiosqlite.Connection:
-        if self._connection is None:
-            raise RuntimeError("You must fist connect to the database using `await db.connect()`")
-        return self._connection
-
-    @property
-    def cursor(self):
-        return self.connection.cursor
-
-    async def init(self):
-        if self._connection is None:
-            await self.connect()
-
-        async with self.cursor() as cursor:
-            sql = """
-            CREATE TABLE IF NOT EXISTS history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                identifier TEXT
-            )
-            """
-            await cursor.execute(sql)
-        await self.connection.commit()
-
-    async def already_processed(self, content: Identifiable) -> bool:
-        sql = """SELECT * FROM history WHERE identifier = ?"""
-        async with self.cursor() as cursor:
-            await cursor.execute(sql, (content.db_identifier,))
-            return await cursor.fetchone() is not None
-
-    async def add(self, content: Identifiable) -> None:
-        sql = """INSERT INTO history (identifier) VALUES (?)"""
-        async with self.cursor() as cursor:
-            await cursor.execute(sql, (content.db_identifier,))
-        await self.connection.commit()
