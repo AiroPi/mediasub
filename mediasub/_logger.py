@@ -1,8 +1,7 @@
 import logging
 import os
 import sys
-from contextlib import contextmanager
-from typing import Any, Literal, ParamSpec
+from typing import Any, ParamSpec
 
 P = ParamSpec("P")
 
@@ -96,29 +95,3 @@ def setup_logger(name: str | None = None, log_file: str | None = None, level: in
         logger.addHandler(log_handler)
 
     return logger
-
-
-def log_function(
-    logger: logging.Logger,
-    level: Literal["debug", "info"],
-    task: str,
-    silent: bool = False,
-):
-    @contextmanager
-    def inner():
-        if level == "debug":
-            method = logger.debug
-        else:
-            method = logger.info
-
-        method(f"Starting : {task}")
-        try:
-            yield
-        except Exception as e:
-            method(f"Failed : {task}", exc_info=e)
-            raise
-
-        if not silent:
-            method(f"Finished : {task}")
-
-    return inner()

@@ -3,7 +3,6 @@ import logging
 from typing import Type, cast
 
 from mediasub import MediaSub
-from mediasub.models import Chapter, MangaSource
 
 logger = logging.getLogger(__name__)
 

@@ -86,7 +86,7 @@ class MediaSub:
         Returns:
             The time until the next timeout, in seconds.
         """
-        for source in self._bound_callbacks.items():
+        for source in self._bound_callbacks.keys():
             if not isinstance(source, PollSource):
                 continue
 

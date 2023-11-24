@@ -94,7 +94,7 @@ class Source(ABC, Generic[ID_co]):
         if self._client is None:
             if not self.shared_client:
                 logger.warning(__("No client defined for source {}, so a new one has been created.", self.name))
-            self._client = httpx.AsyncClient()
+            self._client = httpx.AsyncClient(follow_redirects=True)
         return self._client
 
     @client.setter
