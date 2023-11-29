@@ -10,7 +10,7 @@ import httpx
 from ._logger import BraceMessage as __, setup_logger
 from .database import Database
 from .errors import SourceDown
-from .source import Identifiable, PollSource, Source, Status
+from .source import Identifiable, PullSource, Source, Status
 
 if TYPE_CHECKING:
     from .types import Callback, ID_co, ReturnT, SourceT
@@ -87,14 +87,14 @@ class MediaSub:
             The time until the next timeout, in seconds.
         """
         for source in self._bound_callbacks.keys():
-            if not isinstance(source, PollSource):
+            if not isinstance(source, PullSource):
                 continue
 
             if self._timeouts[source.name] > dt.datetime.now():
                 continue
 
             try:
-                contents: Iterable[Identifiable] = await source.poll()  # TODO(airo.pi_): provide context
+                contents: Iterable[Identifiable] = await source.pull()  # TODO(airo.pi_): provide context
             except SourceDown:
                 if source.status != Status.DOWN:
                     source.status = Status.DOWN

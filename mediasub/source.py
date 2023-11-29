@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class LastPollContext(NamedTuple):
+class LastPullContext(NamedTuple):
     date: datetime
     identifier: str
 
@@ -32,9 +32,9 @@ class Status(Enum):
 
     Attributes:
         UP: the source is UP
-        DOWN: SourceDown exception raised while polling new contents
+        DOWN: SourceDown exception raised while pulling new contents
         UNKNOWN: there is currently no informations about the status
-        WARNING: an exception has been raised while polling, other than SourceDown
+        WARNING: an exception has been raised while pulling, other than SourceDown
     """
 
     UP = "UP"
@@ -46,7 +46,7 @@ class Status(Enum):
 class Source(ABC, Generic[ID_co]):
     """The base class for any source you want to implement.
 
-    All sources you want to implement must inherit from PollSource or PubsubSource, that inherit from Source.
+    All sources you want to implement must inherit from PullSource or PubsubSource, that inherit from Source.
     You must define a name, and an url for every source you create.
 
     Attributes:
@@ -55,7 +55,7 @@ class Source(ABC, Generic[ID_co]):
 
     Example::
 
-        class GoogleNewsRSS(PollSource[Article]):
+        class GoogleNewsRSS(PullSource[Article]):
             name = "GoogleNews"
             url = "https://example.com/feed"
             ...
@@ -102,30 +102,30 @@ class Source(ABC, Generic[ID_co]):
         self._client = client
 
 
-class PollSource(Source):
-    """A source working by polling the content.
+class PullSource(Source):
+    """A source working by pulling the content.
 
-    If your source just provide a list of contents (or if your scrap a page), you should use PollSource as a base.
-    The poll method will be called periodically by the core of the module.
+    If your source just provide a list of contents (or if your scrap a page), you should use PullSource as a base.
+    The pull method will be called periodically by the core of the module.
     """
 
     def __init__(self, shared_client: bool = False, timeout: int = 300):
-        """Inits PollSource.
+        """Inits PullSource.
 
         Args:
             shared_client: if False, an http client is created only for this Source
-            timeout: the delay in seconds between 2 polls. Defaults to 300.
+            timeout: the delay in seconds between 2 pulls. Defaults to 300.
         """
         super().__init__(shared_client)
         self.timeout = timeout
 
     @abstractmethod
-    async def poll(self, last_poll_ctx: LastPollContext | None = None) -> Iterable[ID_co]:
+    async def pull(self, last_pull_ctx: LastPullContext | None = None) -> Iterable[ID_co]:
         """A method called periodically by the core to check for new content.
 
 
         Args:
-            last_poll_ctx: some informations about the last poll, can be used to optimize the poll process.
+            last_pull_ctx: some informations about the last pull, can be used to optimize the pull process.
 
         Returns:
             An iterable of "new" contents, or last contents.
