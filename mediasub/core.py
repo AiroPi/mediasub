@@ -93,6 +93,8 @@ class MediaSub:
             if self._timeouts[source.name] > dt.datetime.now():
                 continue
 
+            self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=source.timeout)
+
             try:
                 contents: Iterable[Identifiable] = await source.pull()  # TODO(airo.pi_): provide context
             except SourceDown:
@@ -113,7 +115,6 @@ class MediaSub:
             source.status = Status.UP
 
             await self._handle_content(source, *contents)
-            self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=source.timeout)
 
         return min(until - dt.datetime.now() for until in self._timeouts.values()).total_seconds()
 
