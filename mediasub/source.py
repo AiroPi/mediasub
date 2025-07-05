@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from datetime import datetime
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
-    Generic,
+    ClassVar,
     NamedTuple,
     ParamSpec,
     Protocol,
     TypeVar,
+    runtime_checkable,
 )
 
 import httpx
@@ -51,7 +51,8 @@ class Status(Enum):
     WARNING = "WARNING"
 
 
-class Source(ABC, Generic[ID_co]):
+@runtime_checkable
+class Source(Protocol[ID_co]):
     """The base class for any source you want to implement.
 
     All sources you want to implement must inherit from PullSource or PubsubSource, that inherit from Source.
@@ -70,6 +71,12 @@ class Source(ABC, Generic[ID_co]):
 
     """
 
+    name: ClassVar[str]
+
+    shared_client: bool
+    status: Status
+    _client: httpx.AsyncClient | None
+
     def __init__(self, shared_client: bool = False):
         """Inits Source.
 
@@ -83,18 +90,8 @@ class Source(ABC, Generic[ID_co]):
             shared_client: tell is the Source should have it's own http client or the shared one.
         """
         self.shared_client = shared_client
-        self.status: Status = Status.UNKNOWN
-        self._client: httpx.AsyncClient | None = None
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """The name of the source"""
-
-    # @property
-    # @abstractmethod
-    # def url(self) -> str:
-    #     """The url of the source."""
+        self.status = Status.UNKNOWN
+        self._client = None
 
     @property
     def client(self) -> httpx.AsyncClient:
@@ -115,12 +112,15 @@ class Source(ABC, Generic[ID_co]):
         self._client = client
 
 
-class PullSource(Source):
+@runtime_checkable
+class PullSource(Source, Protocol):
     """A source working by pulling the content.
 
     If your source just provide a list of contents (or if your scrap a page), you should use PullSource as a base.
     The pull method will be called periodically by the core of the module.
     """
+
+    timeout: int
 
     def __init__(self, shared_client: bool = False, timeout: int = 300):
         """Inits PullSource.
@@ -132,7 +132,6 @@ class PullSource(Source):
         super().__init__(shared_client)
         self.timeout = timeout
 
-    @abstractmethod
     async def pull(self, last_pull_ctx: LastPullContext | None = None) -> Iterable[ID_co]:
         """A method called periodically by the core to check for new content.
 
@@ -145,9 +144,11 @@ class PullSource(Source):
             This function *can* returns already processed contents if their ID is still the same.
             The core will ignore them.
         """
+        ...
 
 
-class PubsubSource(Source):
+@runtime_checkable
+class PubsubSource(Source, Protocol):
     """A source working by being subscribed to a content flux.
 
     If your source is "averted" by the provider that there is new content, you should use PubsubSource as a base.
@@ -194,7 +195,4 @@ class Identifiable(Protocol):
     This identifier is used by the core to avoid sending the same content twice.
     """
 
-    @property
-    def id(self) -> str:
-        """The unique ID of a content."""
-        ...
+    id: str
