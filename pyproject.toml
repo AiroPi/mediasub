@@ -14,11 +14,26 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 requires-python = ">=3.10"
-dynamic = ["version", "readme", "dependencies"]
+dependencies = ["aiosqlite", "httpx"]
+dynamic = ["version", "readme"]
+
+[dependency-groups]
+dev = [
+    { include-group = "lint" },
+    # { include-group = "tox" },
+    # { include-group = "tests" },
+]
+# tests = [  #
+#     "pytest<8",
+#     "pytest-coverage",
+#     "pytest-cases",
+#     "pytest-lazy-fixtures"
+# ]
+lint = ["pyright", "ruff"]
+# tox = ["tox", "tox-uv"]
 
 [tool.setuptools.dynamic]
 version = { attr = "mediasub.__version__" }
-dependencies = { file = ["requirements.txt"] }
 readme = { file = ["README.md"] }
 
 [tool.setuptools]
@@ -27,48 +42,78 @@ packages = ["mediasub"]
 [tool.setuptools.package-data]
 mediasub = ["py.typed"]
 
-[tool.pylint]
-max-line-length = 120
-allow-reexport-from-package = true
-ignore-patterns = [".*.pyi"]
-jobs = 4
-unsafe-load-any-extension = false
-disable = [
-    "missing-module-docstring",
-    "missing-class-docstring",
-    "missing-function-docstring",
-    "abstract-method",
-    "unnecessary-ellipsis",
-    # "arguments-differ",
-    # "attribute-defined-outside-init",
-    # "duplicate-code",
-    # "eq-without-hash",
-    # "fixme",
-    # "global-statement",
-    # "implicit-str-concat",
-    # "import-error",
-    # "import-self",
-    # "import-star-module-level",
-    # "inconsistent-return-statements",
-    # "invalid-str-codec",
-]
-argument-rgx = "^[a-z_][a-z0-9_]{0,30}$"
-attr-rgx = "^[a-z_][a-z0-9_]{0,30}$"
-function-rgx = "^[a-z_][a-z0-9_]{0,30}$"
-method-rgx = '[a-z_][a-z0-9_]{0,30}$'
-variable-rgx = '[a-z_][a-z0-9_]{0,30}$'
-ignore-long-lines = '''(?x)(
-^\s*(\#\ )?<?https?://\S+>?$|
-^\s*(from\s+\S+\s+)?import\s+.+$)'''
-indent-string = '    '
-dummy-variables-rgx = '^\*{0,2}(_$|unused_|dummy_)'
-callbacks = ['cb_', '_cb']
+[tool.pyright]
+typeCheckingMode = "strict"
+include = ["mediasub"]
 
-[tool.black]
+[tool.ruff]
 line-length = 120
-target-version = ['py310']
+indent-width = 4
+target-version = "py310"
+src = ["mediasub"]
 
-[tool.isort]
-profile = "black"
-line_length = 120
-combine_as_imports = true
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle Error
+    "F",     # pyflakes
+    "UP",    # pyupgrade
+    "SIM",   # flake8-simplify
+    "I",     # imports
+    "S",     # bandit (security)
+    "N",     # pep8-naming
+    "ASYNC", # flake8-async
+    "C4",    # flake8-compehensions
+    "FA",    # flake8-future-annotations
+    "ISC",   # flake8-implicit-str-concat
+    "ICN",   # flake8-import-conventions
+    "G",     # flake8-logging-format
+    "PIE",   # flake8-pie
+    "PYI",   # flake8-pyi
+    "RSE",   # flake8-raise
+    "SLOT",  # flake8-slots
+    "INT",   # flake8-gettext
+    "TRY",   # tryceratops
+    "FLY",   # flynt
+    "PERF",  # Perflint
+    "FURB",  # refurb
+    "LOG",   # flake8-logging
+    "RUF",   # Ruff-specific-rules
+    # "ERA",   # locate commented codes
+    # "FIX",   # locate TODOs and FIXME
+    # "PTH",   # flake8-use-pathlib (maybe todo ?)
+    # "TID",   # flake8-tidy-imports (maybe todo ?)
+    # "SLF",   # flake8-self  (managed by pyright)
+    # "RET",   # flake8-return
+    # "Q",     # flake8-quotes
+    # "T20",   # flake8-print
+    # "DTZ",   # flake8-datetimez (TODO)
+    # "B",     # flake8-bugbear
+]
+ignore = [
+    "E501",   # line too long (we relate on the formater)
+    "N818",   # Error suffix for exceptions names
+    "PIE796", # Enum contains duplicate value
+    "TRY003", # Avoid specifying long messages outsides the exception class
+    "ISC001", # To avoid conflicts with the formatter
+]
+dummy-variable-rgx = '^\*{0,2}(_$|__$|unused_|dummy_)'
+
+[tool.ruff.lint.extend-per-file-ignores]
+"test/**/*.py" = [
+    "S101", # asserts allowed in tests...
+    "ARG",  # Unused function args -> fixtures nevertheless are functionally relevant...
+    "FBT",  # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
+
+    "PLR2004", # Magic value used in comparison, ...
+    "S311",    # Standard pseudo-random generators are not suitable for cryptographic purposes
+    "S105",    # Possible hardcoded password
+    "S106",    # Possible hardcoded password
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint.isort]
+combine-as-imports = true

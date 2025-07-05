@@ -2,9 +2,17 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Generic, Iterable, NamedTuple, ParamSpec, Protocol, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Generic,
+    NamedTuple,
+    ParamSpec,
+    Protocol,
+    TypeVar,
+)
 
 import httpx
 
@@ -83,17 +91,22 @@ class Source(ABC, Generic[ID_co]):
     def name(self) -> str:
         """The name of the source"""
 
-    @property
-    @abstractmethod
-    def url(self) -> str:
-        """The url of the source."""
+    # @property
+    # @abstractmethod
+    # def url(self) -> str:
+    #     """The url of the source."""
 
     @property
     def client(self) -> httpx.AsyncClient:
         """A httpx.AsyncClient you can use to make your requests"""
         if self._client is None:
             if not self.shared_client:
-                logger.warning(__("No client defined for source {}, so a new one has been created.", self.name))
+                logger.warning(
+                    __(
+                        "No client defined for source {}, so a new one has been created.",
+                        self.name,
+                    )
+                )
             self._client = httpx.AsyncClient(follow_redirects=True)
         return self._client
 

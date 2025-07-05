@@ -1,4 +1,0 @@
-httpx
-aiosqlite
-unidecode
-typing_extensions

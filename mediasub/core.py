@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Iterable
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, Any, Never
 
 import httpx
 
@@ -32,7 +33,7 @@ class MediaSub:
         """Returns a list of all the sources recorded using MediaSub.sub_to"""
         return list(self._bound_callbacks.keys())
 
-    async def start(self) -> None:
+    async def start(self) -> Never:
         """Starts the main loop.
 
         This method will never return.
@@ -86,7 +87,7 @@ class MediaSub:
         Returns:
             The time until the next timeout, in seconds.
         """
-        for source in self._bound_callbacks.keys():
+        for source in self._bound_callbacks:
             if not isinstance(source, PullSource):
                 continue
 
@@ -96,7 +97,7 @@ class MediaSub:
             self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=source.timeout)
 
             try:
-                contents: Iterable[Identifiable] = await source.pull()  # TODO(airo.pi_): provide context
+                contents: Iterable[Identifiable] = await source.pull()
             except SourceDown:
                 if source.status != Status.DOWN:
                     source.status = Status.DOWN
@@ -139,7 +140,9 @@ class MediaSub:
                     print(f"New video from {video.channel.name} : {video.title}")
         """
 
-        def decorator(func: Callback[SourceT, ID_co, ReturnT]) -> Callback[SourceT, ID_co, ReturnT]:
+        def decorator(
+            func: Callback[SourceT, ID_co, ReturnT],
+        ) -> Callback[SourceT, ID_co, ReturnT]:
             for source in sources:
                 source.client = self._webclient
                 self._bound_callbacks.setdefault(source, []).append(func)
