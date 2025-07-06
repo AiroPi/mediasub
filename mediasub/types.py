@@ -1,6 +1,7 @@
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
+from typing import TYPE_CHECKING
 
-from typing_extensions import TYPE_CHECKING, Any, Coroutine, TypeVar
+from typing_extensions import Any, TypeVar
 
 if TYPE_CHECKING:
     from .source import Identifiable, Source

@@ -20,8 +20,6 @@ from ._logger import BraceMessage as __
 from .types import ID_co
 
 if TYPE_CHECKING:
-    from mediasub.core import MediaSub
-
     R = TypeVar("R")
     P = ParamSpec("P")
     S = TypeVar("S", bound="Source")
@@ -113,7 +111,7 @@ class Source(Protocol[ID_co]):
 
 
 @runtime_checkable
-class PullSource(Source, Protocol):
+class PullSource(Source[ID_co], Protocol):
     """A source working by pulling the content.
 
     If your source just provide a list of contents (or if your scrap a page), you should use PullSource as a base.
@@ -147,52 +145,59 @@ class PullSource(Source, Protocol):
         ...
 
 
-@runtime_checkable
-class PubsubSource(Source, Protocol):
-    """A source working by being subscribed to a content flux.
+# @runtime_checkable
+# class PubsubSource(Source[ID_co], Protocol):
+#     """A source working by being subscribed to a content flux.
 
-    If your source is "averted" by the provider that there is new content, you should use PubsubSource as a base.
-    Your PubsubSource will then needs to call the MediaSub.publish method, that will then call the corresponding
-    callbacks.
+#     If your source is "averted" by the provider that there is new content, you should use PubsubSource as a base.
+#     Your PubsubSource will then needs to call the MediaSub.publish method, that will then call the corresponding
+#     callbacks.
 
-    Example::
+#     Example::
 
-        class YoutubeVideo(PubsubSource[Video]):
-            @app.get("/youtube-pubsub")
-            async def on_video(self, raw_data: Any):
-                content: Video = transform_to_video(raw_data)
-                await self.publish(content)
-    """
+#         class YoutubeVideo(PubsubSource[Video]):
+#             @app.get("/youtube-pubsub")
+#             async def on_video(self, raw_data: Any):
+#                 content: Video = transform_to_video(raw_data)
+#                 await self.publish(content)
+#     """
 
-    _bound: MediaSub
+#     _bound: MediaSub
 
-    async def publish(self, *contents: Identifiable) -> None:
-        """Use this method to call the callbacks when there is new content available.
+#     async def publish(self, *contents: Identifiable) -> None:
+#         """Use this method to call the callbacks when there is new content available.
 
-        Args:
-            *contents: the new content(s) available.
-        """
-        await self._bound.publish(self, *contents)
+#         Args:
+#             *contents: the new content(s) available.
+#         """
+#         await self._bound.publish(self, *contents)
 
-    def bind(self, bound: MediaSub):
-        """
-        Allow the core to bound a source with a MediaSub instance.
-        This should not be called otherwise.
-        """
-        self._bound: MediaSub = bound
+#     def bind(self, bound: MediaSub):
+#         """
+#         Allow the core to bound a source with a MediaSub instance.
+#         This should not be called otherwise.
+#         """
+#         self._bound: MediaSub = bound
 
 
-class Identifiable(Protocol):
-    """A protocol describing the content that sources provide.
-
-    Avoid duplication by implementing a unique identification name for the content.
-    This name should be the same for the same content, no matter the source.
-
-    For example, if a source A has a content named "OnePiece", and a source B has the same new content but named
-    "one-piece", they should have the same identifier. This is only important if you have multiple sources for the same
-    type of content. You can use the helper function `utils.normalize`.
-
-    This identifier is used by the core to avoid sending the same content twice.
-    """
-
+class _Identifiable(Protocol):
     id: str
+
+
+class _IdentifiableProperty(Protocol):
+    @property
+    def id(self) -> str: ...
+
+
+Identifiable = _Identifiable | _IdentifiableProperty
+"""A protocol describing the content that sources provide.
+
+Avoid duplication by implementing a unique identification name for the content.
+This name should be the same for the same content, no matter the source.
+
+For example, if a source A has a content named "OnePiece", and a source B has the same new content but named
+"one-piece", they should have the same identifier. This is only important if you have multiple sources for the same
+type of content. You can use the helper function `utils.normalize`.
+
+This identifier is used by the core to avoid sending the same content twice.
+"""
