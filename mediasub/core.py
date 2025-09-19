@@ -94,7 +94,9 @@ class MediaSub:
             if self._timeouts[source.name] > dt.datetime.now():
                 continue
 
-            self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(seconds=source.timeout)
+            self._timeouts[source.name] = dt.datetime.now() + dt.timedelta(
+                seconds=source.timeout or source.default_timeout
+            )
 
             try:
                 contents: Iterable[Identifiable] = await source.pull()

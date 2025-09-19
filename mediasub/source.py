@@ -118,9 +118,10 @@ class PullSource(Source[ID_co], Protocol):
     The pull method will be called periodically by the core of the module.
     """
 
-    timeout: int
+    timeout = None
+    default_timeout: int = 300
 
-    def __init__(self, shared_client: bool = False, timeout: int = 300):
+    def __init__(self, shared_client: bool = False, timeout: int | None = None):
         """Inits PullSource.
 
         Args:
