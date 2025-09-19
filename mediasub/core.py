@@ -115,7 +115,10 @@ class MediaSub:
                 continue
             source.status = Status.UP
 
-            await self._handle_content(source, *contents)
+            try:
+                await self._handle_content(source, *contents)
+            except Exception:
+                logger.exception(__("Error while handling new content for {}", source.name))
 
         return min(until - dt.datetime.now() for until in self._timeouts.values()).total_seconds()
 
