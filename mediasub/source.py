@@ -79,10 +79,11 @@ class Source(Protocol[ID_co]):
         """Inits Source.
 
         Note:
-            By using `MediaSub.subto(AnySource)`, the module will define a shared client that will be used by all
+            By using `MediaSub.sub_to(AnySource)`, the module will define a shared client that will be used by all
             the sources. You can set `shared_client` to `False` if you want to class to have it's own http client.
-            If `shared_client` is `True` but for any reason you use the source without the MediaSub.subto decorator,
+            If `shared_client` is `True` but for any reason you use the source without the MediaSub.sub_to decorator,
             a warning message will be logged telling you that a http client has been created.
+            You can also assign your own client by defining the `client` attribute to an instance.
 
         Args:
             shared_client: tell is the Source should have it's own http client or the shared one.
@@ -95,10 +96,10 @@ class Source(Protocol[ID_co]):
     def client(self) -> httpx.AsyncClient:
         """A httpx.AsyncClient you can use to make your requests"""
         if self._client is None:
-            if not self.shared_client:
+            if self.shared_client:
                 logger.warning(
                     __(
-                        "No client defined for source {}, so a new one has been created.",
+                        "`shared_client` is true for source {} but client has been accessed before being used in `sub_to`, so a new client has been created.",
                         self.name,
                     )
                 )

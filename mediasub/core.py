@@ -149,7 +149,8 @@ class MediaSub:
             func: Callback[SourceT, ID_co, ReturnT],
         ) -> Callback[SourceT, ID_co, ReturnT]:
             for source in sources:
-                source.client = self._webclient
+                if source.shared_client:
+                    source.client = self._webclient
                 self._bound_callbacks.setdefault(source, []).append(func)
                 self._timeouts.setdefault(source.name, dt.datetime.now())
             return func
