@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Never
 
 import httpx
 
-from ._logger import BraceMessage as __, setup_logger
+from ._logger import BraceMessage as __
 from .database import Database
 from .errors import SourceDown
 from .source import Identifiable, PullSource, Source, Status
@@ -16,7 +16,6 @@ from .source import Identifiable, PullSource, Source, Status
 if TYPE_CHECKING:
     from .types import Callback, ID_co, ReturnT, SourceT
 
-setup_logger("mediasub")
 logger = logging.getLogger(__name__)
 
 
