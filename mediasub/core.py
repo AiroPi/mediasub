@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
-from collections.abc import Callable, Iterable
+from collections.abc import Awaitable, Callable, Coroutine, Iterable
 from typing import TYPE_CHECKING, Any, Never
 
 import httpx
@@ -25,7 +25,7 @@ class MediaSub:
         self._webclient = httpx.AsyncClient(follow_redirects=True)
         self._timeouts: dict[str, dt.datetime] = {}
         self._bound_callbacks: dict[Source, list[Callback[Any, Any, Any]]] = {}
-        self._running_tasks: list[asyncio.Task[Any]] = []
+        self._tasks_manager = TasksManager()
 
     @property
     def sources(self) -> list[Source]:
@@ -45,20 +45,6 @@ class MediaSub:
             timeout = await self.sync()
             await asyncio.sleep(timeout)
 
-            del_tasks: set[asyncio.Task[Any]] = set()
-            for task in self._running_tasks:
-                if task.done():
-                    exception = task.exception()
-                    if exception is not None:
-                        logger.exception(
-                            __("An error occurred while executing a callback."),
-                            exc_info=exception,
-                        )
-                    del_tasks.add(task)
-
-            for task in del_tasks:
-                self._running_tasks.remove(task)
-
     async def _handle_content(self, src: Source, *contents: Identifiable) -> None:
         """This is the method called by sync and publish to manage the new content.
 
@@ -74,9 +60,7 @@ class MediaSub:
         new_elements = [content for content in contents if not await self._db.already_processed(content)]
         for content in reversed(new_elements):
             await self._db.add(content)
-
-            for callback in callbacks:
-                self._running_tasks.append(asyncio.create_task(callback(src, content)))
+            self._tasks_manager.run((callback(src, content) for callback in callbacks), src.post_handlers)
 
     async def sync(self) -> float:
         """Synchronize the source, getting the last published contents.
@@ -155,3 +139,27 @@ class MediaSub:
             return func
 
         return decorator
+
+
+class TasksManager:
+    def __init__(self) -> None:
+        self._running = set[asyncio.Task[None]]()
+
+    def run(self, tasks: Iterable[Coroutine[Any, Any, Any]], post_tasks: Callable[[], Awaitable[Any]]):
+        task = asyncio.create_task(self._run(tasks, post_tasks))
+        task.add_done_callback(self._clean)
+        self._running.add(task)
+
+    def _clean(self, task: asyncio.Task[None]):
+        self._running.remove(task)
+
+    async def _run(self, tasks: Iterable[Awaitable[Any]], post_tasks: Callable[[], Awaitable[Any]]):
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                logger.exception("An error occurred while executing a callback.", exc_info=result)
+
+        try:
+            await post_tasks()
+        except Exception:
+            logger.exception("An error occurred while calling a post-handlers callback.")
