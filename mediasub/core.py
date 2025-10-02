@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
-from collections.abc import Awaitable, Callable, Coroutine, Iterable
+from collections.abc import Awaitable, Callable, Iterable
 from typing import TYPE_CHECKING, Any, Never
 
 import httpx
@@ -60,7 +60,8 @@ class MediaSub:
         new_elements = [content for content in contents if not await self._db.already_processed(content)]
         for content in reversed(new_elements):
             await self._db.add(content)
-            self._tasks_manager.run((callback(src, content) for callback in callbacks), src.post_handlers)
+
+        self._tasks_manager.run(src, callbacks, new_elements, src.post_callback)
 
     async def sync(self) -> float:
         """Synchronize the source, getting the last published contents.
@@ -145,21 +146,34 @@ class TasksManager:
     def __init__(self) -> None:
         self._running = set[asyncio.Task[None]]()
 
-    def run(self, tasks: Iterable[Coroutine[Any, Any, Any]], post_tasks: Callable[[], Awaitable[Any]]):
-        task = asyncio.create_task(self._run(tasks, post_tasks))
+    def run(
+        self,
+        src: Source,
+        callbacks: Iterable[Callable[[Any, Any], Awaitable[Any]]],
+        contents: Iterable[Identifiable],
+        post_callback: Callable[[], Awaitable[Any]],
+    ):
+        task = asyncio.create_task(self._run(src, callbacks, contents, post_callback))
         task.add_done_callback(self._clean)
         self._running.add(task)
 
     def _clean(self, task: asyncio.Task[None]):
         self._running.remove(task)
 
-    async def _run(self, tasks: Iterable[Awaitable[Any]], post_tasks: Callable[[], Awaitable[Any]]):
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for result in results:
-            if isinstance(result, Exception):
-                logger.exception("An error occurred while executing a callback.", exc_info=result)
+    async def _run(
+        self,
+        src: Source,
+        callbacks: Iterable[Callable[[Any, Any], Awaitable[Any]]],
+        contents: Iterable[Identifiable],
+        post_callback: Callable[[], Awaitable[Any]],
+    ):
+        for content in contents:
+            results = await asyncio.gather(*(cb(src, content) for cb in callbacks), return_exceptions=True)
+            for result in results:
+                if isinstance(result, Exception):
+                    logger.exception("An error occurred while executing a callback.", exc_info=result)
 
         try:
-            await post_tasks()
+            await post_callback()
         except Exception:
             logger.exception("An error occurred while calling a post-handlers callback.")

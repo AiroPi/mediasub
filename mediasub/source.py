@@ -110,8 +110,8 @@ class Source(Protocol[ID_co]):
     def client(self, client: httpx.AsyncClient):
         self._client = client
 
-    async def post_handlers(self):
-        """Function called after all the handlers have been called."""
+    async def post_callback(self):
+        """Function called after the pull. When handlers are also called, the handlers are called before the post callback."""
 
 
 @runtime_checkable
